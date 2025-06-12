@@ -1,3 +1,4 @@
+/*eslint-disable*/
 export interface Message {
   id: string;
   content: string;

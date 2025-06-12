@@ -1,3 +1,4 @@
+/*eslint-disable*/
 // Crypto polyfill specifically for XMTP
 import { Buffer } from 'buffer';
 

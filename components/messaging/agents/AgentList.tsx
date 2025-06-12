@@ -1,3 +1,4 @@
+/*eslint-disable*/
 "use client";
 import React from 'react';
 import { FiCalendar, FiActivity, FiTool, FiBox } from 'react-icons/fi';

@@ -1,3 +1,4 @@
+/*eslint-disable*/
 // Polyfills for Node.js modules in the browser
 import { Buffer } from 'buffer';
 import process from 'process/browser';

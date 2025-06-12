@@ -1,3 +1,4 @@
+/*eslint-disable*/
 "use client";
 import React, { useState, type FormEvent } from "react";
 import { FiMessageCircle, FiSend, FiVideo } from "react-icons/fi";

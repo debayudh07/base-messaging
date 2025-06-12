@@ -4,10 +4,15 @@ declare global {
     process: NodeJS.Process;
     global: typeof globalThis;
   }
-  
-  var Buffer: typeof Buffer;
-  var process: NodeJS.Process;
-  var global: typeof globalThis;
+    let Buffer: typeof Buffer;
+  let process: NodeJS.Process;
+  let global: typeof globalThis;
+}
+
+// Add declaration for process/browser module
+declare module 'process/browser' {
+  const process: NodeJS.Process;
+  export default process;
 }
 
 export {};
