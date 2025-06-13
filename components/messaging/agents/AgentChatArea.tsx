@@ -84,7 +84,7 @@ export const AgentChatArea: React.FC<AgentChatAreaProps> = ({
 
   if (!selectedAgent) {
     return (
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[50vh] transform hover:scale-[1.02] transition-transform duration-300">
+      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[70vh] transform hover:scale-[1.02] transition-transform duration-300">
         {/* Comic panel border effect */}
         <div className="absolute -top-2 -left-2 w-full h-full bg-gray-800 -z-10"></div>
         
@@ -122,7 +122,7 @@ export const AgentChatArea: React.FC<AgentChatAreaProps> = ({
   }
 
   return (
-    <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[50vh] transform hover:scale-[1.02] transition-transform duration-300">
+    <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[70vh] transform hover:scale-[1.02] transition-transform duration-300">
       {/* Comic panel border effect */}
       <div className="absolute -top-2 -left-2 w-full h-full bg-gray-800 -z-10"></div>
       

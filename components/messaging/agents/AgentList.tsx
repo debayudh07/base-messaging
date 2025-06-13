@@ -86,7 +86,7 @@ export const AgentList: React.FC<AgentListProps> = ({
         </div>
       </div>
 
-      <div className="divide-y-4 divide-black max-h-[50vh] overflow-y-auto bg-white">
+      <div className="divide-y-4 divide-black max-h-[70vh] overflow-y-auto bg-white">
         {agents.length === 0 ? (
           <div className="p-8 text-center relative">
             {/* Speed lines background */}

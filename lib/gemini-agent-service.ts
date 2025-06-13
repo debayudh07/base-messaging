@@ -1,3 +1,4 @@
+/*eslint-disable*/
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize the Gemini AI client

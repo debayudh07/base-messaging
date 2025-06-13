@@ -44,10 +44,9 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
   error,
   currentUserAddress,
 }) => {
-  return (
-    <div className="grid grid-cols-12 gap-6">
+  return (    <div className="grid grid-cols-12 gap-6">
       {/* Agent List */}
-      <div className="col-span-12 md:col-span-4">
+      <div className="col-span-12 md:col-span-3">
         <AgentList
           agents={agents}
           selectedAgent={selectedAgent}
@@ -58,7 +57,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
       </div>
 
       {/* Agent Chat Area */}
-      <div className="col-span-12 md:col-span-8">
+      <div className="col-span-12 md:col-span-9">
         <AgentChatArea
           selectedAgent={selectedAgent}
           currentUserAddress={currentUserAddress}
