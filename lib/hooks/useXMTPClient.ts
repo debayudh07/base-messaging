@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Client } from "@xmtp/xmtp-js";
 import { useAccount, useSignMessage } from "wagmi";
 import type { Conversation, GroupChat, GroupMessage } from "../types";
+import { BasenameManager, BasenameConfig } from "../basename";
 
 export const useXMTPClient = () => {
   const { address, isConnected } = useAccount();
@@ -14,8 +15,9 @@ export const useXMTPClient = () => {
   const [groupConversations, setGroupConversations] = useState<any[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [basename, setBasename] = useState<string>("");
 
-  const initializeClient = async (): Promise<Client | null> => {
+  const initializeClient = async (basenameConfig?: BasenameConfig): Promise<Client | null> => {
     try {
       setError(null);
       setIsInitializing(true);
@@ -27,6 +29,10 @@ export const useXMTPClient = () => {
       if (typeof window === 'undefined') {
         throw new Error("XMTP client must be initialized in browser environment");
       }
+
+      // Generate or get basename
+      const userBasename = BasenameManager.getBasename(address, basenameConfig);
+      setBasename(userBasename);
 
       const signer = {
         getAddress: async () => address,
@@ -48,8 +54,9 @@ export const useXMTPClient = () => {
       setConversations(convos as unknown as Conversation[]);
 
       // Initialize empty group conversations array
-      // Groups will be populated when created or discovered
       setGroupConversations([]);
+
+      console.log(`XMTP Client initialized for ${userBasename} (${address})`);
 
       return xmtp;
     } catch (err) {
@@ -64,9 +71,16 @@ export const useXMTPClient = () => {
   // Auto-initialize when wallet is connected
   useEffect(() => {
     if (isConnected && address && !client) {
-      initializeClient();
+      initializeClient({ useStoredName: true });
     }
   }, [isConnected, address]);
+
+  const updateBasename = (newBasename: string) => {
+    if (address) {
+      BasenameManager.updateBasename(address, newBasename);
+      setBasename(newBasename);
+    }
+  };
 
   const startNewConversation = async (recipientAddress: string): Promise<Conversation | null> => {
     if (!client) return null;
@@ -113,15 +127,15 @@ export const useXMTPClient = () => {
       return false;
     }
   };
-
-  const reinitializeClient = async (): Promise<Client | null> => {
+  const reinitializeClient = async (basenameConfig?: BasenameConfig): Promise<Client | null> => {
     // Clear existing client
     setClient(null);
     setConversations([]);
+    setBasename("");
     
-    // Reinitialize
-    return await initializeClient();
-  };  const createGroup = async (groupData: {
+    // Reinitialize with new basename config
+    return await initializeClient(basenameConfig);
+  };const createGroup = async (groupData: {
     name: string;
     description: string;
     members: string[];
@@ -416,11 +430,13 @@ export const useXMTPClient = () => {
     groupConversations,
     isInitializing,
     error,
+    basename,
     initializeClient,
     reinitializeClient,
     startNewConversation,
     checkCanMessage,
     setError,
+    updateBasename,
     // Group methods
     createGroup,
     sendGroupMessage,

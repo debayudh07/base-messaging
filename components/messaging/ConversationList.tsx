@@ -3,6 +3,7 @@ import React from "react";
 import { FiMessageCircle, FiVideo } from "react-icons/fi";
 import type { Conversation } from "../../lib/types";
 import { shortenAddress } from "../../lib/utils";
+import { BasenameManager } from "../../lib/basename";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -12,15 +13,20 @@ interface ConversationListProps {
   onNewConversation: () => void;
 }
 
+// Helper function to get display name
+const getDisplayName = (address: string): string => {
+  const storedBasename = BasenameManager.getStoredBasename(address);
+  return storedBasename || shortenAddress(address);
+};
+
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
   selectedConversation,
   onSelectConversation,
   onStartCall,
   onNewConversation,
-}) => {
-  return (
-    <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden transform hover:scale-[1.02] transition-transform duration-300">
+}) => {  return (
+    <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden transform hover:scale-[1.02] transition-transform duration-300 h-[80vh] flex flex-col">
       {/* Comic panel border effect */}
       <div className="absolute -top-2 -left-2 w-full h-full bg-gray-800 -z-10"></div>
       
@@ -44,7 +50,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         </div>
       </div>
 
-      <div className="divide-y-4 divide-black max-h-[30vh] overflow-y-auto bg-white">
+      <div className="divide-y-4 divide-black flex-1 overflow-y-auto bg-white">
         {conversations.length === 0 ? (
           <div className="p-8 text-center relative">
             {/* Speed lines background */}
@@ -93,9 +99,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 <div className="w-12 h-12 bg-gray-900 text-white rounded-lg border-2 border-black flex items-center justify-center font-black text-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   <span>{conversation.peerAddress.slice(2, 4).toUpperCase()}</span>
                 </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="font-black text-lg truncate mb-1">
-                    {shortenAddress(conversation.peerAddress)}
+                <div className="ml-3 flex-1">                  <h3 className="font-black text-lg truncate mb-1">
+                    {getDisplayName(conversation.peerAddress)}
                   </h3>
                   <div className="flex gap-2 mt-2">
                     <button

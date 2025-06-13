@@ -6,12 +6,19 @@ import { useAccount } from "wagmi";
 import { useConversation } from "../../lib/hooks/useConversation";
 import type { Conversation } from "../../lib/types";
 import { shortenAddress, formatTime } from "../../lib/utils";
+import { BasenameManager } from "../../lib/basename";
 
 interface MessageAreaProps {
   selectedConversation: Conversation | null;
   onStartCall: (peerAddress: string) => void;
   onNewConversation: () => void;
 }
+
+// Helper function to get display name
+const getDisplayName = (address: string): string => {
+  const storedBasename = BasenameManager.getStoredBasename(address);
+  return storedBasename || shortenAddress(address);
+};
 
 export const MessageArea: React.FC<MessageAreaProps> = ({
   selectedConversation,
@@ -43,7 +50,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
     }
   };  if (!selectedConversation) {
     return (
-      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[40vh] transform hover:scale-[1.02] transition-transform duration-300">
+      <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[80vh] transform hover:scale-[1.02] transition-transform duration-300">
         {/* Comic panel border effect */}
         <div className="absolute -top-2 -left-2 w-full h-full bg-gray-800 -z-10"></div>
         
@@ -92,9 +99,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         <div className="absolute bottom-0 right-0 w-4 h-4 border-r-4 border-b-4 border-black"></div>
       </div>
     );
-  }
-  return (
-    <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[40vh] transform hover:scale-[1.02] transition-transform duration-300">
+  }  return (
+    <div className="relative bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col h-[80vh] transform hover:scale-[1.02] transition-transform duration-300">
       {/* Comic panel border effect */}
       <div className="absolute -top-2 -left-2 w-full h-full bg-gray-800 -z-10"></div>
       
@@ -104,9 +110,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
           <div className="w-10 h-10 bg-white text-black border-2 border-black rounded-lg flex items-center justify-center font-black mr-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             <span>{selectedConversation.peerAddress.slice(2, 4).toUpperCase()}</span>
           </div>
-          <div>
-            <h2 className="font-black text-white text-lg">
-              {shortenAddress(selectedConversation.peerAddress)}
+          <div>            <h2 className="font-black text-white text-lg">
+              {getDisplayName(selectedConversation.peerAddress)}
             </h2>
             <p className="text-xs text-green-400 font-bold">🎮 READY TO PLAY!</p>
           </div>
@@ -149,14 +154,18 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                 className={`flex ${
                   message.senderAddress === address ? "justify-end" : "justify-start"
                 }`}
-              >
-                <div
+              >                <div
                   className={`max-w-[70%] border-2 border-black p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] relative transform transition-all duration-300 hover:scale-105 ${
                     message.senderAddress === address
                       ? "bg-gray-900 text-white -skew-x-3"
                       : "bg-white text-black"
                   }`}
                 >
+                  {/* Sender name */}
+                  <p className={`text-xs font-black mb-1 ${message.senderAddress === address ? 'text-green-400 skew-x-3' : 'text-blue-600'}`}>
+                    {message.senderAddress === address ? 'YOU' : getDisplayName(message.senderAddress)}
+                  </p>
+                  
                   <p className={`mb-2 relative z-10 font-bold ${message.senderAddress === address ? 'skew-x-3' : ''}`}>
                     {message.content}
                   </p>

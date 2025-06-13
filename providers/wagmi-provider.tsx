@@ -47,9 +47,9 @@ export default function Providers({
   const [queryClient] = useState(() => new QueryClient());
 
   const selectedTheme = darkTheme({
-    accentColor: "rgb(34 197 94)", // Tailwind green-500
+    accentColor: "#ff6b9d", // Vibrant pink
     accentColorForeground: "white",
-    borderRadius: "small",
+    borderRadius: "large",
     fontStack: "system",
     overlayBlur: "small",
   });

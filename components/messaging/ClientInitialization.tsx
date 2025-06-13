@@ -1,13 +1,14 @@
 "use client";
-import React from "react";
-import { FiRefreshCw, FiCopy } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { FiRefreshCw, FiCopy, FiEdit3, FiUser } from "react-icons/fi";
 import { shortenAddress, copyAddressToClipboard } from "../../lib/utils";
+import { BasenameManager } from "../../lib/basename";
 
 interface ClientInitializationProps {
   address: string | undefined;
   isInitializing: boolean;
   error: string | null;
-  onInitialize: () => void;
+  onInitialize: (customBasename?: string) => void;
 }
 
 export const ClientInitialization: React.FC<ClientInitializationProps> = ({
@@ -16,6 +17,27 @@ export const ClientInitialization: React.FC<ClientInitializationProps> = ({
   error,
   onInitialize,
 }) => {
+  const [customBasename, setCustomBasename] = useState("");
+  const [showBasenameInput, setShowBasenameInput] = useState(false);
+  const [storedBasename, setStoredBasename] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (address) {
+      const stored = BasenameManager.getStoredBasename(address);
+      setStoredBasename(stored);
+    }
+  }, [address]);
+
+  const handleInitialize = () => {
+    onInitialize(customBasename.trim() || undefined);
+  };
+
+  const handleGenerateNewBasename = () => {
+    if (address) {
+      const newBasename = BasenameManager.getBasename(address);
+      setCustomBasename(newBasename);
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center relative overflow-hidden">
       {/* Manga background pattern */}
@@ -47,9 +69,7 @@ export const ClientInitialization: React.FC<ClientInitializationProps> = ({
                 <p className="font-black text-black text-lg">WALLET CONNECTED</p>
               </div>
             </div>
-          </div>
-
-          {/* Address display */}
+          </div>          {/* Address display */}
           <div className="bg-gray-900 text-white p-4 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] mb-6 flex items-center justify-between">
             <span className="font-black tracking-wider">
               {address ? shortenAddress(address) : ""}
@@ -60,6 +80,52 @@ export const ClientInitialization: React.FC<ClientInitializationProps> = ({
             >
               <FiCopy size={18} />
             </button>
+          </div>
+
+          {/* Basename Section */}
+          <div className="mb-6">
+            {storedBasename && (
+              <div className="bg-blue-500 text-white p-3 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FiUser size={16} />
+                  <span className="font-bold">Current: {storedBasename}</span>
+                </div>
+                <button
+                  onClick={() => setShowBasenameInput(!showBasenameInput)}
+                  className="text-blue-200 hover:text-white transition-colors"
+                >
+                  <FiEdit3 size={16} />
+                </button>
+              </div>
+            )}
+
+            {(showBasenameInput || !storedBasename) && (
+              <div className="bg-white border-2 border-black p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] mb-4">
+                <label className="block text-black font-bold mb-2 text-sm">
+                  CUSTOM BASENAME (OPTIONAL)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customBasename}
+                    onChange={(e) => setCustomBasename(e.target.value)}
+                    placeholder="Enter your display name..."
+                    className="flex-1 border-2 border-black px-3 py-2 font-bold text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={50}
+                  />
+                  <button
+                    onClick={handleGenerateNewBasename}
+                    className="bg-gray-800 text-white px-3 py-2 border-2 border-black font-bold hover:bg-gray-700 transition-colors"
+                    title="Generate random basename"
+                  >
+                    🎲
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 mt-1 font-bold">
+                  THIS WILL BE YOUR DISPLAY NAME IN MESSAGES
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Comic speech bubble style title */}
@@ -85,10 +151,8 @@ export const ClientInitialization: React.FC<ClientInitializationProps> = ({
             <div className="bg-red-500 text-white p-3 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] mb-4 transform -skew-x-3">
               <p className="font-bold text-sm transform skew-x-3">{error}</p>
             </div>
-          )}
-
-          <button
-            onClick={onInitialize}
+          )}          <button
+            onClick={handleInitialize}
             className="w-full bg-white border-3 border-black px-6 py-4 font-black text-black text-lg tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isInitializing}
           >

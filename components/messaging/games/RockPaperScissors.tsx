@@ -6,14 +6,16 @@ interface RockPaperScissorsProps {
   onGameEnd: (winner: string | null, gameData: any) => void;
   gameState?: any;
   isPlayerTurn?: boolean;
+  onMove?: (move: any) => void;
 }
 
 type Choice = 'rock' | 'paper' | 'scissors' | null;
 
 export const RockPaperScissors: React.FC<RockPaperScissorsProps> = ({
   onGameEnd,
-  gameState,
-  isPlayerTurn = true
+  gameState: externalGameState,
+  isPlayerTurn = true,
+  onMove
 }) => {
   const [playerChoice, setPlayerChoice] = useState<Choice>(null);
   const [opponentChoice, setOpponentChoice] = useState<Choice>(null);
@@ -21,6 +23,29 @@ export const RockPaperScissors: React.FC<RockPaperScissorsProps> = ({
   const [showResult, setShowResult] = useState(false);
   const [playerScore, setPlayerScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
+
+  // Update local state when external game state changes
+  useEffect(() => {
+    if (externalGameState) {
+      setPlayerScore(externalGameState.scores ? Object.values(externalGameState.scores)[0] as number : 0);
+      setOpponentScore(externalGameState.scores ? Object.values(externalGameState.scores)[1] as number : 0);
+      
+      // Show choices and result if both players have chosen
+      if (externalGameState.choices && Object.keys(externalGameState.choices).length === 2) {
+        const choices = Object.entries(externalGameState.choices);
+        setPlayerChoice(choices[0][1] as Choice);
+        setOpponentChoice(choices[1][1] as Choice);
+        setShowResult(true);
+        
+        // Auto reset after showing result
+        setTimeout(() => {
+          setPlayerChoice(null);
+          setOpponentChoice(null);
+          setShowResult(false);
+        }, 3000);
+      }
+    }
+  }, [externalGameState]);
 
   const choices = [
     { name: 'rock', emoji: '🪨', color: 'from-gray-400 to-gray-600' },
@@ -40,30 +65,37 @@ export const RockPaperScissors: React.FC<RockPaperScissorsProps> = ({
     
     return winConditions[player] === opponent ? 'player' : 'opponent';
   };
-
   const handleChoice = (choice: Choice) => {
     if (!isPlayerTurn || playerChoice) return;
     
     setPlayerChoice(choice);
     
-    // Simulate opponent choice (in real game, this would come from XMTP)
-    const opponentChoices: Choice[] = ['rock', 'paper', 'scissors'];
-    const randomChoice = opponentChoices[Math.floor(Math.random() * 3)];
-    setOpponentChoice(randomChoice);
-    
-    setTimeout(() => {
-      const winner = getWinner(choice, randomChoice);
-      setResult(winner);
-      setShowResult(true);
+    // If using WebSocket, send move to server
+    if (onMove) {
+      onMove({
+        type: 'choice',
+        choice: choice
+      });
+    } else {
+      // Local game logic (fallback)
+      const opponentChoices: Choice[] = ['rock', 'paper', 'scissors'];
+      const randomChoice = opponentChoices[Math.floor(Math.random() * 3)];
+      setOpponentChoice(randomChoice);
       
-      if (winner === 'player') {
-        setPlayerScore(prev => prev + 1);
-      } else if (winner === 'opponent') {
-        setOpponentScore(prev => prev + 1);
-      }
-      
-      onGameEnd(winner, { playerChoice: choice, opponentChoice: randomChoice, winner });
-    }, 2000);
+      setTimeout(() => {
+        const winner = getWinner(choice, randomChoice);
+        setResult(winner);
+        setShowResult(true);
+        
+        if (winner === 'player') {
+          setPlayerScore(prev => prev + 1);
+        } else if (winner === 'opponent') {
+          setOpponentScore(prev => prev + 1);
+        }
+        
+        onGameEnd(winner, { playerChoice: choice, opponentChoice: randomChoice, winner });
+      }, 2000);
+    }
   };
 
   const resetRound = () => {

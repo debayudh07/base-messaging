@@ -4,80 +4,43 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { v4 as uuidv4 } from "uuid"; // We'll need to add this dependency
 import type { AIAgent, AgentMessage } from "../types";
+import { geminiAgentService, agentPersonalities } from "../gemini-agent-service";
 
-// Predefined demo agents
-const demoAgents: AIAgent[] = [
-  {
-    id: "finance-agent-1",
-    name: "TokenSage",
-    description: "Advanced token price and market analysis agent. Provides real-time market insights and token recommendations.",
-    role: "finance",
-    capabilities: ["Price Analysis", "Market Trends", "Token Research", "Trading Signals"],
+// Predefined demo agents using Gemini personalities
+const demoAgents: AIAgent[] = Object.keys(agentPersonalities).map(role => {
+  const personality = agentPersonalities[role];
+  return {
+    id: `${role}-agent-1`,
+    name: personality.name,
+    description: personality.description,
+    role: personality.role,
+    capabilities: personality.capabilities,
     chainId: 1,
     createdAt: new Date(),
     isActive: true,
     owner: "0x0000000000000000000000000000000000000000",
     imageUrl: "https://via.placeholder.com/150"
-  },
-  {
-    id: "nft-agent-1",
-    name: "NFTVisionary",
-    description: "NFT collection tracker and value analyzer. Discovers trending collections and rare items.",
-    role: "nft",
-    capabilities: ["Collection Analysis", "Rarity Checks", "Price Evaluation", "Trend Discovery"],
-    chainId: 1,
-    createdAt: new Date(),
-    isActive: true,
-    owner: "0x0000000000000000000000000000000000000000",
-    imageUrl: "https://via.placeholder.com/150"
-  },
-  {
-    id: "defi-agent-1",
-    name: "YieldHunter",
-    description: "DeFi protocol analyzer that finds the best yield opportunities across multiple chains.",
-    role: "defi",
-    capabilities: ["Yield Optimization", "Risk Assessment", "Protocol Analysis", "LP Strategy"],
-    chainId: 1,
-    createdAt: new Date(),
-    isActive: true,
-    owner: "0x0000000000000000000000000000000000000000",
-    imageUrl: "https://via.placeholder.com/150"
-  }
-];
+  };
+});
 
-// Demo messages map by agent ID
-const demoMessagesMap: Record<string, AgentMessage[]> = {
-  "finance-agent-1": [
+// Demo messages map by agent ID with welcome messages from Gemini personalities
+const demoMessagesMap: Record<string, AgentMessage[]> = {};
+
+// Initialize demo messages for each agent
+Object.keys(agentPersonalities).forEach(role => {
+  const personality = agentPersonalities[role];
+  const agentId = `${role}-agent-1`;
+  demoMessagesMap[agentId] = [
     {
       id: "msg-1",
-      content: "Hello! I'm TokenSage, your AI market analysis expert. How can I help you today?",
-      senderAddress: "finance-agent-1",
+      content: `Hello! I'm ${personality.name}, your AI ${personality.specialization} expert. I specialize in ${personality.capabilities.slice(0, 3).join(', ')} and more. How can I help you today?`,
+      senderAddress: agentId,
       timestamp: new Date(Date.now() - 86400000), // 1 day ago
       type: "system",
-      agentId: "finance-agent-1"
+      agentId
     }
-  ],
-  "nft-agent-1": [
-    {
-      id: "msg-1",
-      content: "Welcome to NFTVisionary! I can help you discover trending NFT collections and analyze rarity. What would you like to know?",
-      senderAddress: "nft-agent-1",
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
-      type: "system",
-      agentId: "nft-agent-1"
-    }
-  ],
-  "defi-agent-1": [
-    {
-      id: "msg-1",
-      content: "Hi there! YieldHunter at your service. I can find the best yield opportunities across DeFi. What are your investment goals?",
-      senderAddress: "defi-agent-1",
-      timestamp: new Date(Date.now() - 86400000), // 1 day ago
-      type: "system",
-      agentId: "defi-agent-1"
-    }
-  ]
-};
+  ];
+});
 
 export const useAIAgents = () => {
   const { address } = useAccount();
@@ -108,7 +71,6 @@ export const useAIAgents = () => {
       }, 1000);
     }
   }, [selectedAgent]);
-
   // Create a new agent
   const createAgent = async (agentData: {
     name: string;
@@ -122,13 +84,35 @@ export const useAIAgents = () => {
     try {
       setError(null);
       
+      // Generate enhanced capabilities using Gemini if capabilities are basic
+      let enhancedCapabilities = agentData.capabilities;
+      if (enhancedCapabilities.length === 0) {
+        try {
+          enhancedCapabilities = await geminiAgentService.generateAgentCapabilities(
+            agentData.role, 
+            agentData.description
+          );
+        } catch (err) {
+          console.warn("Failed to generate enhanced capabilities, using defaults");
+          enhancedCapabilities = ["General Analysis", "Data Processing", "User Assistance"];
+        }
+      }
+
+      // Create custom agent personality for Gemini
+      const customPersonality = await geminiAgentService.createCustomAgent(
+        agentData.name,
+        agentData.description,
+        agentData.role,
+        enhancedCapabilities
+      );
+      
       // Create new agent object
       const newAgent: AIAgent = {
         id: `agent-${uuidv4()}`,
         name: agentData.name,
         description: agentData.description,
         role: agentData.role,
-        capabilities: agentData.capabilities,
+        capabilities: enhancedCapabilities,
         chainId: agentData.chainId,
         contractAddress: agentData.contractAddress,
         apiEndpoint: agentData.apiEndpoint,
@@ -140,10 +124,23 @@ export const useAIAgents = () => {
       // Simulate API request delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      // Generate welcome message using Gemini
+      let welcomeMessage: string;
+      try {
+        welcomeMessage = await geminiAgentService.generateAgentResponse(
+          agentData.role,
+          "Introduce yourself to a new user and explain how you can help them.",
+          []
+        );
+      } catch (err) {
+        console.warn("Failed to generate welcome message, using default");
+        welcomeMessage = `Hello! I'm ${newAgent.name}, your AI ${newAgent.role} agent. I'm here to help you with ${newAgent.capabilities.join(', ')}. How can I assist you today?`;
+      }
+
       // Add welcome message for the new agent
       demoMessagesMap[newAgent.id] = [{
         id: `msg-${uuidv4()}`,
-        content: `Hello! I'm ${newAgent.name}, your AI ${newAgent.role} agent. I'm here to help you with ${newAgent.capabilities.join(', ')}. How can I assist you today?`,
+        content: welcomeMessage,
         senderAddress: newAgent.id,
         timestamp: new Date(),
         type: "system",
@@ -160,7 +157,6 @@ export const useAIAgents = () => {
       throw err;
     }
   };
-
   // Send message to agent
   const sendMessage = async (agentId: string, content: string) => {
     try {
@@ -183,63 +179,59 @@ export const useAIAgents = () => {
       // Add user message immediately
       setMessages(prev => [...prev, userMessage]);
 
-      // Simulate API request delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Get conversation history for context
+      const conversationHistory = demoMessagesMap[agentId]
+        ?.filter(msg => msg.type === "message")
+        ?.slice(-6) // Last 6 messages for context
+        ?.map(msg => ({
+          role: msg.senderAddress === address ? 'user' as const : 'assistant' as const,
+          content: msg.content
+        })) || [];
 
-      // Generate agent response based on the selected agent
-      let agentResponse: AgentMessage;
+      // Find the agent to get its role
       const selectedAgentObj = agents.find(a => a.id === agentId);
-      
-      if (selectedAgentObj?.role === "finance") {
-        agentResponse = {
-          id: `msg-${uuidv4()}`,
-          content: generateFinanceResponse(content),
-          senderAddress: agentId,
-          timestamp: new Date(),
-          type: content.toLowerCase().includes("transaction") ? "action" : "message",
-          agentId,
-          metadata: content.toLowerCase().includes("transaction") ? {
-            transactionHash: `0x${Math.random().toString(16).substring(2, 62)}`,
-            functionName: "analyzeMarket"
-          } : undefined
+      const agentRole = selectedAgentObj?.role || 'finance';
+
+      // Generate response using Gemini
+      let agentResponseContent: string;
+      try {
+        agentResponseContent = await geminiAgentService.generateAgentResponse(
+          agentRole,
+          content,
+          conversationHistory
+        );
+      } catch (err) {
+        console.error("Failed to generate Gemini response:", err);
+        agentResponseContent = "I apologize, but I'm experiencing some technical difficulties right now. Please try again in a moment.";
+      }
+
+      // Determine message type based on content
+      let messageType: 'message' | 'action' | 'result' | 'error' | 'system' = 'message';
+      let metadata: any = undefined;
+
+      if (content.toLowerCase().includes('transaction') || content.toLowerCase().includes('execute')) {
+        messageType = 'action';
+        metadata = {
+          transactionHash: `0x${Math.random().toString(16).substring(2, 62)}`,
+          functionName: "executeAction"
         };
-      } else if (selectedAgentObj?.role === "nft") {
-        agentResponse = {
-          id: `msg-${uuidv4()}`,
-          content: generateNFTResponse(content),
-          senderAddress: agentId,
-          timestamp: new Date(),
-          type: content.toLowerCase().includes("rarity") ? "result" : "message",
-          agentId,
-          metadata: content.toLowerCase().includes("nft") ? {
-            contractAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
-            functionName: "getRarityScore"
-          } : undefined
-        };
-      } else if (selectedAgentObj?.role === "defi") {
-        agentResponse = {
-          id: `msg-${uuidv4()}`,
-          content: generateDeFiResponse(content),
-          senderAddress: agentId,
-          timestamp: new Date(),
-          type: content.toLowerCase().includes("yield") ? "result" : "message",
-          agentId,
-          metadata: content.toLowerCase().includes("yield") ? {
-            transactionHash: `0x${Math.random().toString(16).substring(2, 62)}`,
-            functionName: "calculateAPY"
-          } : undefined
-        };
-      } else {
-        // Generic response
-        agentResponse = {
-          id: `msg-${uuidv4()}`,
-          content: `I've processed your request: "${content}". I'm working on improving my responses for your specific needs. Is there anything else you'd like to know?`,
-          senderAddress: agentId,
-          timestamp: new Date(),
-          type: "message",
-          agentId
+      } else if (content.toLowerCase().includes('analyze') || content.toLowerCase().includes('calculate')) {
+        messageType = 'result';
+        metadata = {
+          functionName: "performAnalysis",
+          parameters: { query: content }
         };
       }
+
+      const agentResponse: AgentMessage = {
+        id: `msg-${uuidv4()}`,
+        content: agentResponseContent,
+        senderAddress: agentId,
+        timestamp: new Date(),
+        type: messageType,
+        agentId,
+        metadata
+      };
 
       // Add agent response
       setMessages(prev => [...prev, agentResponse]);
@@ -300,70 +292,3 @@ export const useAIAgents = () => {
     setError,
   };
 };
-
-// Helper functions to generate responses based on the message content
-function generateFinanceResponse(message: string): string {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes("eth") || lowerMessage.includes("ethereum")) {
-    return "Based on my latest analysis, Ethereum is showing strong momentum with increased developer activity. The recent upgrade has significantly improved transaction throughput. Technical indicators suggest a potential upward trend in the short term, but keep an eye on overall market conditions.";
-  }
-  
-  if (lowerMessage.includes("btc") || lowerMessage.includes("bitcoin")) {
-    return "Bitcoin's on-chain metrics are showing accumulation by long-term holders, which historically precedes bullish moves. Hash rate is at all-time highs, suggesting strong network security. My analysis indicates a possible consolidation phase before the next major move.";
-  }
-  
-  if (lowerMessage.includes("market") || lowerMessage.includes("trend")) {
-    return "Current market analysis shows increasing institutional interest in the crypto sector. DeFi TVL has grown 15% over the past month, while NFT trading volumes have decreased slightly. My sentiment analysis of social media indicates cautious optimism among retail investors. Key resistance levels to watch are at $35,500 for BTC and $2,300 for ETH.";
-  }
-  
-  if (lowerMessage.includes("transaction") || lowerMessage.includes("execute")) {
-    return "I've analyzed the requested transaction parameters. Based on current gas fees and market conditions, I recommend proceeding with execution. The estimated slippage is within acceptable ranges, and my price impact analysis shows minimal market disturbance. Shall I prepare the transaction for your approval?";
-  }
-  
-  return "I've analyzed your request regarding financial markets. My data suggests there's been significant volatility in this sector recently. Would you like me to provide a more detailed analysis on specific assets or market segments?";
-}
-
-function generateNFTResponse(message: string): string {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes("collection") || lowerMessage.includes("trend")) {
-    return "My analysis shows that generative art collections are gaining significant traction this month, with a 28% increase in trading volume. PFP projects are seeing reduced activity, while utility-focused NFTs connected to gaming are emerging as a strong trend. I'm detecting growing interest in music NFTs, which might be the next category to watch.";
-  }
-  
-  if (lowerMessage.includes("rarity") || lowerMessage.includes("rare")) {
-    return "I've analyzed the collection's rarity distribution. Based on trait frequency and statistical models, the rarity score for this item is 89.7/100, placing it in the top 5% of the collection. The most valuable trait combination is the background (0.5% occurrence) and the accessory (1.2% occurrence). Similar items have recently sold for 2.4-3.1 ETH.";
-  }
-  
-  if (lowerMessage.includes("floor") || lowerMessage.includes("price")) {
-    return "The current floor price is 1.87 ETH, which represents a 12% increase over the past week. Trading volume is up 23% in the same period. My predictive model suggests moderate upward pressure on the floor over the next 7 days, with key support at 1.65 ETH. The collection's liquidity score is 7.8/10, indicating healthy market depth.";
-  }
-  
-  if (lowerMessage.includes("mint") || lowerMessage.includes("upcoming")) {
-    return "I've identified 3 promising upcoming NFT projects based on social metrics and team analysis: 1) CryptoVistas by the established artist collective PixelLabs, 2) MetaHomes with utility in the emerging Decentraland competitor, and 3) SonicBeings with music industry partnerships. Would you like detailed analysis on any of these?";
-  }
-  
-  return "I've analyzed your request about NFTs. The current market shows interesting developments in digital collectibles and virtual assets. Would you like me to focus on a specific collection, creator, or marketplace trend?";
-}
-
-function generateDeFiResponse(message: string): string {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes("yield") || lowerMessage.includes("apy")) {
-    return "My yield analysis shows the following optimal opportunities:\n\n1. The USDC-ETH pool on Uniswap V3 (concentrated from 0.8x to 1.2x) is generating 24.8% APY with moderate impermanent loss risk\n2. Lido stETH with leveraged restaking via EigenLayer is yielding 12.3% with relatively low risk\n3. The BTC-USDT pool on Curve has a 9.1% APY currently boosted by CRV incentives\n\nWould you like me to prepare a detailed risk assessment for any of these options?";
-  }
-  
-  if (lowerMessage.includes("risk") || lowerMessage.includes("security")) {
-    return "I've conducted a risk assessment of your specified protocol. My security analysis identified: 1) No critical vulnerabilities in the audited contracts, 2) Medium centralization risk with 3/8 multisig control, 3) Moderate oracle dependency with dual price feeds, 4) Low liquidity risk based on TVL/volume ratio of 3.2. The protocol's risk score is 72/100, indicating a generally secure position but with some points of caution.";
-  }
-  
-  if (lowerMessage.includes("borrow") || lowerMessage.includes("loan")) {
-    return "Based on current market conditions, the most efficient borrowing options are:\n1. Aave on Arbitrum: 3.2% for USDC with no additional incentives\n2. Compound on Ethereum: 3.7% for DAI with COMP rewards effectively reducing rate to ~2.9%\n3. Spark Protocol: 3.5% for sUSD with potential for rate reduction through governance\n\nConsidering your position, option #2 would optimize your capital efficiency while minimizing risk.";
-  }
-  
-  if (lowerMessage.includes("strategy") || lowerMessage.includes("portfolio")) {
-    return "After analyzing your portfolio, I recommend the following adjustments to optimize for the current market conditions:\n\n1. Reduce stablecoin exposure by 15% and redirect to BTC/ETH (70/30 split)\n2. Consider adding 5% allocation to liquid staking derivatives for improved yield\n3. Implement a basic dollar-cost averaging strategy for your alt-coin positions\n4. Utilize a hedging strategy via options on Lyra to protect against downside risk\n\nThis balanced approach maintains your risk profile while potentially increasing returns by 4-7% annually based on historical backtesting.";
-  }
-  
-  return "I've analyzed your DeFi query. The protocol landscape shows interesting yield opportunities balanced against various risk factors. Would you like me to dive deeper into specific protocols, strategies, or market segments?";
-}

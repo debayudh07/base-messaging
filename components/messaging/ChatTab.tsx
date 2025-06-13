@@ -18,11 +18,10 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   onSelectConversation,
   onStartCall,
   onNewConversation,
-}) => {
-  return (
-    <div className="grid grid-cols-12 gap-6">
+}) => {  return (
+    <div className="grid grid-cols-12 gap-4 h-[85vh]">
       {/* Conversation List */}
-      <div className="col-span-12 md:col-span-4">
+      <div className="col-span-12 lg:col-span-3 md:col-span-4">
         <ConversationList
           conversations={conversations}
           selectedConversation={selectedConversation}
@@ -33,7 +32,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       </div>
 
       {/* Message Area */}
-      <div className="col-span-12 md:col-span-8">
+      <div className="col-span-12 lg:col-span-9 md:col-span-8">
         <MessageArea
           selectedConversation={selectedConversation}
           onStartCall={onStartCall}

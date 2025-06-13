@@ -235,18 +235,24 @@ export const MessagingApp: React.FC = () => {
       </div>
     );
   }
-
   // Show initialization screen if client not ready
   if (!client) {
+    const handleInitialize = (customBasename?: string) => {
+      initializeClient({ 
+        customName: customBasename,
+        useStoredName: !customBasename 
+      });
+    };
+
     return (
       <ClientInitialization
         address={address}
         isInitializing={isInitializing}
         error={clientError}
-        onInitialize={initializeClient}
+        onInitialize={handleInitialize}
       />
     );
-  }  // Main app interface
+  }// Main app interface
   return (
     <div className="min-h-screen bg-gray-100 relative overflow-hidden">
       {/* Manga background pattern */}
@@ -395,11 +401,11 @@ export const MessagingApp: React.FC = () => {
                   />
                 </div>
                 
-                {/* Game Hub */}
-                <div className="col-span-12 md:col-span-8">
+                {/* Game Hub */}                <div className="col-span-12 md:col-span-8">
                   <GameHub
                     selectedConversationPeer={selectedConversation?.peerAddress}
                     onSendGameMessage={handleSendGameMessage}
+                    currentUserPeer={client?.address || address}
                   />
                 </div>
               </div>            </div>

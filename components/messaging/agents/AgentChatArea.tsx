@@ -229,23 +229,19 @@ export const AgentChatArea: React.FC<AgentChatAreaProps> = ({
                   <div className="flex items-center">
                     <div className="w-6 h-6 rounded-full border-2 border-black mr-2 flex items-center justify-center bg-white">
                       {message.senderAddress === currentUserAddress ? '👤' : getMessageTypeIcon(message.type)}
-                    </div>
-                    <span className="font-bold text-sm">
+                    </div>                    <span className="font-bold text-sm text-black">
                       {message.senderAddress === currentUserAddress ? 'You' : selectedAgent.name}
                     </span>
-                  </div>
-                  <div className="text-xs flex items-center">
+                  </div>                  <div className="text-xs flex items-center text-black">
                     <FiClock className="mr-1" size={12} />
                     {formatTimestamp(message.timestamp)}
                   </div>
+                </div>                <div className="p-2 bg-white border border-black rounded">
+                  <p className="whitespace-pre-wrap break-words text-black">{message.content}</p>
                 </div>
-                <div className="p-2 bg-white border border-black rounded">
-                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                </div>
-                
-                {/* Metadata for actions/results/errors */}
+                  {/* Metadata for actions/results/errors */}
                 {message.metadata && (
-                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
+                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs text-black">
                     {message.metadata.transactionHash && (
                       <div className="flex items-center gap-1 mb-1">
                         <span className="font-bold">Tx:</span>

@@ -13,12 +13,14 @@ interface MemoryGameProps {
   onGameEnd: (winner: string | null, gameData: any) => void;
   gameState?: any;
   isPlayerTurn?: boolean;
+  onMove?: (move: any) => void;
 }
 
 export const MemoryGame: React.FC<MemoryGameProps> = ({
   onGameEnd,
-  gameState,
-  isPlayerTurn = true
+  gameState: externalGameState,
+  isPlayerTurn = true,
+  onMove
 }) => {
   const emojis = ['🎮', '🎯', '🎲', '🎪', '🎨', '🎭', '🎵', '🎸'];
   
@@ -27,6 +29,19 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({
   const [moves, setMoves] = useState(0);
   const [gameComplete, setGameComplete] = useState(false);
   const [score, setScore] = useState(1000);
+
+  // Update local state when external game state changes
+  useEffect(() => {
+    if (externalGameState) {
+      setCards(externalGameState.cards || []);
+      setFlippedCards(externalGameState.flippedCards || []);
+      
+      if (externalGameState.scores) {
+        const playerScores = Object.values(externalGameState.scores);
+        setScore(playerScores[0] as number || 0);
+      }
+    }
+  }, [externalGameState]);
 
   const initializeGame = useCallback(() => {
     const shuffledEmojis = [...emojis, ...emojis]
@@ -90,18 +105,26 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({
       onGameEnd('player', { moves, score: finalScore, time: Date.now() });
     }
   }, [cards, gameComplete, onGameEnd, score, moves]);
-
   const handleCardClick = (cardId: number) => {
     if (!isPlayerTurn || flippedCards.length === 2) return;
     
     const card = cards.find(c => c.id === cardId);
     if (!card || card.isFlipped || card.isMatched) return;
 
-    setCards(prev => prev.map(c => 
-      c.id === cardId ? { ...c, isFlipped: true } : c
-    ));
-    
-    setFlippedCards(prev => [...prev, cardId]);
+    // If using WebSocket, send move to server
+    if (onMove) {
+      onMove({
+        type: 'card-flip',
+        cardId: cardId
+      });
+    } else {
+      // Local game logic (fallback)
+      setCards(prev => prev.map(c => 
+        c.id === cardId ? { ...c, isFlipped: true } : c
+      ));
+      
+      setFlippedCards(prev => [...prev, cardId]);
+    }
   };
 
   const getCardClassName = (card: Card) => {

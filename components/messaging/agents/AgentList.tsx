@@ -136,21 +136,19 @@ export const AgentList: React.FC<AgentListProps> = ({
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-10 h-10 bg-blue-600 text-white rounded-lg border-2 border-black flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                       {getAgentEmoji(agent.role)}
-                    </div>
-                    <div>
-                      <h3 className="font-black text-lg">
+                    </div>                    <div>
+                      <h3 className={`font-black text-lg ${selectedAgent?.id === agent.id ? 'text-white' : 'text-black'}`}>
                         {agent.name}
                       </h3>
-                      <p className="text-sm font-bold opacity-80 truncate max-w-[200px]">
+                      <p className={`text-sm font-bold opacity-80 truncate max-w-[200px] ${selectedAgent?.id === agent.id ? 'text-white' : 'text-black'}`}>
                         {agent.description}
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className={`grid grid-cols-2 gap-2 text-xs ${selectedAgent?.id === agent.id ? 'text-white' : 'text-black'}`}>
                     <div className="flex items-center gap-1">
                       <FiActivity size={12} />
-                      <span className={getAgentRoleColor(agent.role)}>{agent.role}</span>
+                      <span className={selectedAgent?.id === agent.id ? 'text-white' : getAgentRoleColor(agent.role)}>{agent.role}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <FiCalendar size={12} />

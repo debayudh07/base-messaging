@@ -8,22 +8,32 @@ interface TicTacToeProps {
   gameState?: any;
   isPlayerTurn?: boolean;
   playerSymbol?: 'X' | 'O';
+  onMove?: (move: any) => void;
 }
 
 export const TicTacToe: React.FC<TicTacToeProps> = ({
   onGameEnd,
-  gameState,
+  gameState: externalGameState,
   isPlayerTurn = true,
-  playerSymbol = 'X'
+  playerSymbol = 'X',
+  onMove
 }) => {
   const [board, setBoard] = useState<(string | null)[]>(
-    gameState?.board || Array(9).fill(null)
+    externalGameState?.board || Array(9).fill(null)
   );
   const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>(
-    gameState?.currentPlayer || 'X'
+    externalGameState?.currentPlayer || 'X'
   );
   const [winner, setWinner] = useState<string | null>(null);
   const [winningLine, setWinningLine] = useState<number[]>([]);
+
+  // Update local state when external game state changes
+  useEffect(() => {
+    if (externalGameState) {
+      setBoard(externalGameState.board || Array(9).fill(null));
+      setCurrentPlayer(externalGameState.currentPlayer || 'X');
+    }
+  }, [externalGameState]);
 
   const winningCombinations = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
@@ -52,14 +62,23 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
       onGameEnd(result.winner, { board, currentPlayer });
     }
   }, [board]);
-
   const handleCellClick = (index: number) => {
     if (board[index] || winner || !isPlayerTurn) return;
 
-    const newBoard = [...board];
-    newBoard[index] = currentPlayer;
-    setBoard(newBoard);
-    setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X');
+    // If using WebSocket, send move to server
+    if (onMove) {
+      onMove({
+        type: 'cell-click',
+        cellIndex: index,
+        symbol: playerSymbol
+      });
+    } else {
+      // Local game logic (fallback)
+      const newBoard = [...board];
+      newBoard[index] = currentPlayer;
+      setBoard(newBoard);
+      setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X');
+    }
   };
 
   const resetGame = () => {
