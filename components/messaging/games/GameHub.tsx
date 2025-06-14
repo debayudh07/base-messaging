@@ -5,7 +5,7 @@ import { TicTacToe } from './TicTacToe';
 import { RockPaperScissors } from './RockPaperScissors';
 import { MemoryGame } from './MemoryGame';
 import { FiArrowLeft, FiPlay, FiUsers, FiWifi, FiWifiOff } from 'react-icons/fi';
-import { useGameSocket } from '../../../lib/hooks';
+import { useXMTPGame } from '../../../lib/hooks';
 
 type GameType = 'tictactoe' | 'rps' | 'memory' | null;
 
@@ -28,32 +28,32 @@ export const GameHub: React.FC<GameHubProps> = ({
   });
   const [waitingForPlayer, setWaitingForPlayer] = useState(false);
   const [gameNotifications, setGameNotifications] = useState<string[]>([]);
-
   // Create room ID from conversation participants
   const roomId = selectedConversationPeer && currentUserPeer 
     ? [currentUserPeer, selectedConversationPeer].sort().join('-')
     : '';
 
-  // Initialize socket connection when game is selected
+  // Initialize XMTP game connection when game is selected
   const {
     connected,
-    players,
     gameState,
-    currentPlayer,
-    allPlayersReady,
-    gameStarted,
     isPlayerTurn,
+    gameStarted,
+    playerSymbol,
+    opponentReady,
+    playerReady,
+    startGame: initializeGame,
     markReady,
     sendMove,
-    disconnect
-  } = useGameSocket({
-    roomId: currentGame ? roomId : '',
-    peer: currentUserPeer || '',
+    endGame
+  } = useXMTPGame({
     gameType: currentGame || 'tictactoe',
-    onGameUpdate: (data) => {
+    peerAddress: selectedConversationPeer || '',
+    currentUserAddress: currentUserPeer || '',
+    onGameUpdate: (data: any) => {
       console.log('Game updated:', data);
     },
-    onGameEnd: (data) => {
+    onGameEnd: (data: any) => {
       console.log('Game ended:', data);
       setPlayerStats(prev => ({
         ...prev,
@@ -67,17 +67,13 @@ export const GameHub: React.FC<GameHubProps> = ({
         data.winner === 'tie' ? '🤝 It\'s a tie!' : '😢 You lost!'
       );
     },
-    onPlayerJoined: (data) => {
-      console.log('Player joined:', data);
-      if (data.players.length === 2) {
-        setWaitingForPlayer(false);
-        addNotification('🎮 Opponent joined! Get ready to play!');
-      }
+    onGameInvite: (data: any) => {
+      console.log('Game invite received:', data);
+      addNotification('🎮 Game invitation received!');
     },
-    onPlayerDisconnected: (data) => {
-      console.log('Player disconnected:', data);
-      addNotification('😞 Opponent disconnected');
-      setWaitingForPlayer(true);
+    onOpponentMove: (data: any) => {
+      console.log('Opponent move:', data);
+      addNotification('🎯 Opponent made a move!');
     }
   });
 
@@ -86,14 +82,20 @@ export const GameHub: React.FC<GameHubProps> = ({
     setTimeout(() => {
       setGameNotifications(prev => prev.slice(0, -1));
     }, 5000);
-  };
-
-  useEffect(() => {
-    if (currentGame && players.length === 2 && !allPlayersReady) {
-      // Auto-ready when both players are present
-      setTimeout(() => markReady(), 1000);
+  };  useEffect(() => {
+    if (currentGame && selectedConversationPeer && currentUserPeer) {
+      // Auto-start sequence for XMTP games
+      if (!playerReady && connected) {
+        setTimeout(() => markReady(), 1000);
+      }
+      
+      // Check if both players are ready
+      if (playerReady && opponentReady && !gameStarted) {
+        setWaitingForPlayer(false);
+        addNotification('🎮 Both players ready! Game starting...');
+      }
     }
-  }, [currentGame, players.length, allPlayersReady, markReady]);
+  }, [currentGame, selectedConversationPeer, currentUserPeer, gameStarted, playerReady, opponentReady, connected, markReady]);
 
   const games = [
     {
@@ -120,10 +122,9 @@ export const GameHub: React.FC<GameHubProps> = ({
       color: 'from-purple-500 to-indigo-500',
       difficulty: 'Medium'
     }
-  ];
-  const handleGameEnd = (winner: string | null, gameData: any) => {
-    // This is now handled by the socket connection
+  ];  const handleGameEnd = (winner: string | null, gameData: any) => {
     console.log('Local game end:', { winner, gameData });
+    // Game end is now handled automatically by XMTP hook
   };
 
   const startGame = (gameType: GameType) => {
@@ -134,11 +135,14 @@ export const GameHub: React.FC<GameHubProps> = ({
     
     setCurrentGame(gameType);
     setWaitingForPlayer(true);
-    addNotification('🔗 Connecting to game server...');
-  };
-
-  const backToHub = () => {
-    disconnect();
+    addNotification('🔗 Starting game...');
+    
+    // Auto-initialize the game after setting the game type
+    setTimeout(() => {
+      initializeGame();
+    }, 500);
+  };  const backToHub = () => {
+    endGame();
     setCurrentGame(null);
     setWaitingForPlayer(false);
     setGameNotifications([]);
@@ -151,12 +155,11 @@ export const GameHub: React.FC<GameHubProps> = ({
             <div className="flex items-center justify-center gap-3 mb-3">
               <FiUsers className="text-2xl animate-bounce" />
               <h3 className="text-xl font-black text-black">WAITING FOR OPPONENT</h3>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-sm font-bold">
+            </div>            <div className="flex items-center justify-center gap-2 text-sm font-bold">
               {connected ? (
                 <>
                   <FiWifi className="text-green-600" />
-                  <span>Connected ({players.length}/2 players)</span>
+                  <span>Connected ({(playerReady ? 1 : 0) + (opponentReady ? 1 : 0)}/2 players)</span>
                 </>
               ) : (
                 <>
@@ -238,8 +241,7 @@ export const GameHub: React.FC<GameHubProps> = ({
               ))}
             </div>
           )}
-          
-          {/* Connection Status */}
+            {/* Connection Status */}
           {currentGame && (
             <div className="flex items-center justify-between bg-gray-900 text-white px-4 py-2 border-2 border-black mb-4">
               <div className="flex items-center gap-2">
@@ -256,17 +258,32 @@ export const GameHub: React.FC<GameHubProps> = ({
                 )}
               </div>
               <div className="font-bold text-sm">
-                PLAYERS: {players.length}/2
+                PLAYERS: {(playerReady ? 1 : 0) + (opponentReady ? 1 : 0)}/2
+              </div>
+              <div className="font-bold text-xs opacity-75">
+                {gameStarted ? '🎮 Playing' : '⏳ Waiting'} • 
+                {isPlayerTurn ? '👤 Your Turn' : '🤖 Opponent'}
               </div>
             </div>
           )}
-          
-          <button
+            <button
             onClick={backToHub}
-            className="flex items-center gap-2 bg-white border-2 border-black px-4 py-2 font-black text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transform transition-all duration-300"
+            className="flex items-center gap-2 bg-white border-2 border-black px-4 py-2 font-black text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transform transition-all duration-300 mb-4"
           >
             <FiArrowLeft /> BACK TO GAMES
           </button>
+          
+          {/* Debug Panel for Development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-yellow-100 border-2 border-yellow-400 p-2 text-xs mb-4">
+              <strong>Debug Info:</strong><br/>
+              Connected: {connected ? 'Yes' : 'No'} | 
+              Game Started: {gameStarted ? 'Yes' : 'No'} | 
+              Player Ready: {playerReady ? 'Yes' : 'No'} | 
+              Opponent Ready: {opponentReady ? 'Yes' : 'No'} | 
+              Your Turn: {isPlayerTurn ? 'Yes' : 'No'}
+            </div>
+          )}
           {renderGame()}
         </div>
         

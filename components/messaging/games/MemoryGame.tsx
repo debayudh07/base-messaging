@@ -104,14 +104,13 @@ export const MemoryGame: React.FC<MemoryGameProps> = ({
       const finalScore = Math.max(0, score - (moves * 5));
       onGameEnd('player', { moves, score: finalScore, time: Date.now() });
     }
-  }, [cards, gameComplete, onGameEnd, score, moves]);
-  const handleCardClick = (cardId: number) => {
+  }, [cards, gameComplete, onGameEnd, score, moves]);  const handleCardClick = (cardId: number) => {
     if (!isPlayerTurn || flippedCards.length === 2) return;
     
     const card = cards.find(c => c.id === cardId);
     if (!card || card.isFlipped || card.isMatched) return;
 
-    // If using WebSocket, send move to server
+    // If using XMTP, send move to peer
     if (onMove) {
       onMove({
         type: 'card-flip',

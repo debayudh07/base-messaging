@@ -64,13 +64,12 @@ export const RockPaperScissors: React.FC<RockPaperScissorsProps> = ({
     };
     
     return winConditions[player] === opponent ? 'player' : 'opponent';
-  };
-  const handleChoice = (choice: Choice) => {
+  };  const handleChoice = (choice: Choice) => {
     if (!isPlayerTurn || playerChoice) return;
     
     setPlayerChoice(choice);
     
-    // If using WebSocket, send move to server
+    // If using XMTP, send move to peer
     if (onMove) {
       onMove({
         type: 'choice',

@@ -26,10 +26,10 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
   );
   const [winner, setWinner] = useState<string | null>(null);
   const [winningLine, setWinningLine] = useState<number[]>([]);
-
   // Update local state when external game state changes
   useEffect(() => {
     if (externalGameState) {
+      console.log('TicTacToe: Updating state from external:', externalGameState);
       setBoard(externalGameState.board || Array(9).fill(null));
       setCurrentPlayer(externalGameState.currentPlayer || 'X');
     }
@@ -61,11 +61,19 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
       setWinningLine(result.line);
       onGameEnd(result.winner, { board, currentPlayer });
     }
-  }, [board]);
-  const handleCellClick = (index: number) => {
-    if (board[index] || winner || !isPlayerTurn) return;
+  }, [board]);  const handleCellClick = (index: number) => {
+    if (board[index] || winner || !isPlayerTurn) {
+      console.log('TicTacToe: Move blocked', { 
+        cellOccupied: !!board[index], 
+        gameEnded: !!winner, 
+        notPlayerTurn: !isPlayerTurn 
+      });
+      return;
+    }
 
-    // If using WebSocket, send move to server
+    console.log('TicTacToe: Making move', { index, symbol: playerSymbol, isPlayerTurn });
+
+    // If using XMTP, send move to peer
     if (onMove) {
       onMove({
         type: 'cell-click',
@@ -138,8 +146,7 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
             </h3>
           </div>
         </div>
-        
-        {winner ? (
+          {winner ? (
           <div className="bg-yellow-400 border-2 border-black px-4 py-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transform -skew-x-3 mb-4">
             <p className="font-black text-black transform skew-x-3">
               {winner === 'tie' ? "IT'S A TIE! 🤝" : `${winner.toUpperCase()} WINS! 🎉`}
@@ -149,6 +156,9 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({
           <div className="bg-gray-900 text-white px-4 py-2 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] mb-4">
             <p className="font-bold text-sm">
               {isPlayerTurn ? `YOUR TURN (${playerSymbol})` : "OPPONENT'S TURN"}
+            </p>
+            <p className="text-xs opacity-75">
+              Board: {board.filter(cell => cell).length}/9 • Current: {currentPlayer}
             </p>
           </div>
         )}

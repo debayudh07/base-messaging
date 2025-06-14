@@ -50,6 +50,28 @@ export interface AIAgent {
   imageUrl?: string; // Avatar/image URL
 }
 
+// Game-related types
+export interface GameMessage {
+  type: 'game-invite' | 'game-move' | 'game-state' | 'game-end' | 'game-ready';
+  gameType: 'tictactoe' | 'rps' | 'memory';
+  gameId: string;
+  data: any;
+  timestamp: number;
+  sender: string;
+}
+
+export interface GameState {
+  gameId: string;
+  gameType: 'tictactoe' | 'rps' | 'memory';
+  players: string[];
+  currentPlayer?: string;
+  board?: any[];
+  choices?: Record<string, any>;
+  scores?: Record<string, number>;
+  isGameActive: boolean;
+  winner?: string | null;
+}
+
 export interface AgentMessage {
   id: string;
   content: string;
