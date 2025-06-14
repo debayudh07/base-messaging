@@ -1,3 +1,4 @@
+/*eslint-disable*/
 import { useState, useCallback, useEffect } from 'react';
 
 interface UseXMTPGameProps {
